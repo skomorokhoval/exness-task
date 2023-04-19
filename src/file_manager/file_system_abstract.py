@@ -1,10 +1,9 @@
 import hashlib
 import os
+import sys
 
 
-class OSAbstract:
-    def __init__(self):
-        pass
+class FileSystemAbstract:
 
     def if_exists(self, folder_path):
         raise NotImplementedError("Method 'if_exists()' must be implemented.")
@@ -33,12 +32,6 @@ class OSAbstract:
     def rename_file(self, old_filename, new_filename):
         raise NotImplementedError("Method 'rename_file()' must be implemented.")
 
-    def directory_exists(self, folder_path):
-        if self.if_exists(folder_path):
-            return True
-        else:
-            return False
-
     def is_directory_empty(self, directory_path):
         return len(self.read_dir_content(directory_path)) == 0
 
@@ -50,7 +43,7 @@ class OSAbstract:
             source_path = os.path.join(src_folder_path, file)
             target_path = os.path.join(dst_folder_path, file)
 
-            if os.path.isdir(source_path):
+            if self.is_dir(source_path):
                 self.copy_files_in_folder(source_path, target_path)
             else:
                 self.copy_file(source_path, target_path)
@@ -81,15 +74,15 @@ class OSAbstract:
 
         return file_hashes
 
-    def compare_dirs(self, source_directory_path, destination_directory_path):
+    def sync_dirs(self, source_directory_path, destination_directory_path):
         source_folder_hash = self.calculate_hashes_for_folder(source_directory_path)
         destination_folder_hash = self.calculate_hashes_for_folder(destination_directory_path)
         if len(source_folder_hash) != len(destination_folder_hash):
-            return False
+            return
         for key, value in source_folder_hash.items():
             test_value = destination_folder_hash.get(key)
             if test_value != value or (test_value is None and key not in destination_folder_hash):
-                print(f"Content of  ${value} is identical to  ${test_value}, but these files need to be renamed")
+                print(f"Content of ${value} is identical to  ${test_value}, but these files need to be renamed")
                 old_path = self.find_file_in_directory(test_value, destination_directory_path)
                 new_path = os.path.join(os.path.dirname(old_path), value)
                 self.rename_file(old_path, new_path)
@@ -106,3 +99,18 @@ class OSAbstract:
                 if file == file_name:
                     return file_path
             return None
+
+    def analize_dirs(self, source_directory_path, destination_directory_path):
+        if self.is_directory_empty(destination_directory_path):
+            self.copy_files_in_folder(source_directory_path, destination_directory_path)
+            print("Files are copied successfully")
+            sys.exit()
+
+        if self.is_directory_empty(source_directory_path):
+            self.delete_files(destination_directory_path)
+            print("Files are deleted successfully")
+            sys.exit()
+
+        self.sync_dirs(source_directory_path, destination_directory_path)
+
+
