@@ -64,18 +64,23 @@ def test_copy_files_in_folder_so_no_folders_inside(monkeypatch, mocker, os_file_
 
 def test_copy_files_in_folder_so_folders_inside(monkeypatch, mocker, os_file_system):
     # arrange
-    mock_read_dir_content = mocker.Mock(side_effect=[['folder1', 'test.txt'], ['file1.txt']])
-    monkeypatch.setattr(os_file_system, 'read_dir_content', mock_read_dir_content)
+    monkeypatch.setattr(os_file_system, 'read_dir_content', mocker.Mock(side_effect=[['folder', 'file2.txt'], ['file3.txt']]))
     mocker.patch.object(os_file_system, 'is_dir', side_effect=[True, False, False])
-    monkeypatch.setattr(shutil, 'copyfile', mocker.Mock(return_value=None))
 
     # act
     os_file_system.copy_files_in_folder(source, destination)
 
     # assert
-    os_file_system.create_dir.assert_called_once_with(destination)
-    os_file_system.read_dir_content.assert_called_once_with(source)
+    os_file_system.create_dir.assert_has_calls([
+        mocker.call(destination),
+        mocker.call(destination + '/folder'),
+    ])
+    os_file_system.read_dir_content.assert_has_calls([
+        mocker.call(source),
+        mocker.call(source + '/folder'),
+    ])
     assert os_file_system.create_dir.call_count == 2
-    assert os_file_system.read_dir_content.call_count == 3
+    assert os_file_system.read_dir_content.call_count == 2
+    assert os_file_system.copy_file.call_count == 2
 
 
